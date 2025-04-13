@@ -1,6 +1,6 @@
-#сам pygame
+# сам pygame
 import pygame
-#qrcode для генерации кодов
+# qrcode для генерации кодов
 import qrcode
 
 # первоначальная настройка пайгейма
@@ -24,20 +24,20 @@ except Exception as e:
     exit()
 
 # темы, меняйте по желанию
-#светлая тема
+# светлая тема
 light_theme = {
-    'background': (255, 255, 255), #фон
-    'text': (0, 0, 0), #текст
-    'input': (200, 200, 200), #активное окно ввода
-    'button': (0, 120, 215), #кнопка
-    'border': (0, 0, 0), # край предпросмотра
-    'qr_fill': (0, 0, 0), # цвет кода
-    'qr_bg': (255, 255, 255), # фон предпросмотра
-    'theme_btn_bg': (220, 220, 220) #фон кнопки с темами
+    'background': (255, 255, 255),  # фон
+    'text': (0, 0, 0),  # текст
+    'input': (200, 200, 200),  # активное окно ввода
+    'button': (0, 120, 215),  # кнопка
+    'border': (0, 0, 0),  # край предпросмотра
+    'qr_fill': (0, 0, 0),  # цвет кода
+    'qr_bg': (255, 255, 255),  # фон предпросмотра
+    'theme_btn_bg': (220, 220, 220)  # фон кнопки с темами
 }
-#темная тема
+# темная тема
 dark_theme = {
-    'background': (30, 30, 30), #все так же как в светлой
+    'background': (30, 30, 30),  # все так же как в светлой
     'text': (255, 255, 255),
     'input': (60, 60, 60),
     'button': (0, 80, 160),
@@ -55,11 +55,16 @@ preview_rect = pygame.Rect(50, 260, 350, 350)
 theme_btn_rect = pygame.Rect(600, 20, 50, 50)
 settings_btn_rect = pygame.Rect(600, 80, 50, 50)
 
-#переменные
+# переменные
 active = False
 qrcode_image = None
-is_dark_theme = False #изначальная тема при запуске
+is_dark_theme = False  # изначальная тема при запуске
 settings_window_open = False
+color = 'black'
+backcolor = 'white'
+color_dropdown_open = False  # открыто ли меню выбора цвета
+backcolor_dropdown_open = False  # открыто ли меню выбора фона
+available_colors = ['black', 'white', 'red', 'green', 'blue', 'yellow']  # доступные цвета
 
 # обновление цветов статических надписей
 def update_theme_texts(theme):
@@ -73,11 +78,12 @@ def update_theme_texts(theme):
 
 update_theme_texts(light_theme)
 
-#генерация qr кодов
+
+# генерация qr кодов
 def generate_qrcode(text):
     if not text:
         return None
-    #настройки генерации кодов
+    # настройки генерации кодов
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -88,7 +94,7 @@ def generate_qrcode(text):
     qr.make(fit=True)
 
     # сохранение кода в папку
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(fill_color=color, back_color=backcolor)
     img.save("qrcode.png")
 
     # превью для тем
@@ -99,18 +105,51 @@ def generate_qrcode(text):
     pygame_surface = pygame.image.fromstring(data, img_rgb.size, "RGB")
     return pygame.transform.scale(pygame_surface, (340, 340))
 
-# функция для отрисовки окна настроек
+
 def draw_settings_window():
     settings_rect = pygame.Rect(150, 150, 400, 400)
     current_theme = dark_theme if is_dark_theme else light_theme
-    
+
     # рисуем окно
     pygame.draw.rect(screen, current_theme['background'], settings_rect)
     pygame.draw.rect(screen, current_theme['border'], settings_rect, 2)
-    
+
     # рисуем заголовок
     settings_title = font.render("Настройки", True, current_theme['text'])
     screen.blit(settings_title, (settings_rect.x + 20, settings_rect.y + 20))
+
+    # кнопка выбора цвета qr-кода
+    color_rect = pygame.Rect(settings_rect.x + 50, settings_rect.y + 80, 150, 40)
+    pygame.draw.rect(screen, color if color != 'white' else (200, 200, 200), color_rect)
+    pygame.draw.rect(screen, current_theme['border'], color_rect, 2)
+    color_label = font.render("Цвет кода:", True, current_theme['text'])
+    screen.blit(color_label, (settings_rect.x + 50, settings_rect.y + 60))
+
+    # поясняющая надпись
+    preview_note = infofont.render("(в предпросмотре не отображается)", True, current_theme['text'])
+    screen.blit(preview_note, (settings_rect.x + 50, settings_rect.y + 130))
+
+    # выпадающий список цветов
+    if color_dropdown_open:
+        for i, col in enumerate(available_colors):
+            item_rect = pygame.Rect(color_rect.x, color_rect.y + (i + 1) * 40, 150, 40)
+            pygame.draw.rect(screen, col if col != 'white' else (200, 200, 200), item_rect)
+            pygame.draw.rect(screen, current_theme['border'], item_rect, 2)
+
+    # кнопка выбора фона qr-кода
+    backcolor_rect = pygame.Rect(settings_rect.x + 200, settings_rect.y + 80, 150, 40)
+    pygame.draw.rect(screen, backcolor if backcolor != 'white' else (200, 200, 200), backcolor_rect)
+    pygame.draw.rect(screen, current_theme['border'], backcolor_rect, 2)
+    backcolor_label = font.render("Цвет фона:", True, current_theme['text'])
+    screen.blit(backcolor_label, (settings_rect.x + 200, settings_rect.y + 60))
+
+    # выпадающий список фонов
+    if backcolor_dropdown_open:
+        for i, col in enumerate(available_colors):
+            item_rect = pygame.Rect(backcolor_rect.x, backcolor_rect.y + (i + 1) * 40, 150, 40)
+            pygame.draw.rect(screen, col if col != 'white' else (200, 200, 200), item_rect)
+            pygame.draw.rect(screen, current_theme['border'], item_rect, 2)
+
 
 running = True
 while running:
@@ -135,10 +174,41 @@ while running:
                 update_theme_texts(dark_theme if is_dark_theme else light_theme)
                 if input_text:
                     qrcode_image = generate_qrcode(input_text)
-            
+
             # обработка нажатия на кнопку настроек
             if settings_btn_rect.collidepoint(event.pos):
                 settings_window_open = not settings_window_open
+            if settings_window_open:
+                mouse_pos = event.pos
+                color_rect = pygame.Rect(200, 230, 150, 40)
+                backcolor_rect = pygame.Rect(350, 230, 150, 40)
+
+                # клик по кнопке цвета
+                if color_rect.collidepoint(mouse_pos):
+                    color_dropdown_open = not color_dropdown_open
+                    backcolor_dropdown_open = False
+                # клик по кнопке фона
+                elif backcolor_rect.collidepoint(mouse_pos):
+                    backcolor_dropdown_open = not backcolor_dropdown_open
+                    color_dropdown_open = False
+                # выбор цвета из списка
+                elif color_dropdown_open:
+                    for i, col in enumerate(available_colors):
+                        item_rect = pygame.Rect(200, 270 + i * 40, 150, 40)
+                        if item_rect.collidepoint(mouse_pos):
+                            color = col
+                            color_dropdown_open = False
+                # выбор фона из списка
+                elif backcolor_dropdown_open:
+                    for i, col in enumerate(available_colors):
+                        item_rect = pygame.Rect(350, 270 + i * 40, 150, 40)
+                        if item_rect.collidepoint(mouse_pos):
+                            backcolor = col
+                            backcolor_dropdown_open = False
+                # клик вне элементов закрывает меню
+                else:
+                    color_dropdown_open = False
+                    backcolor_dropdown_open = False
 
         if event.type == pygame.KEYDOWN and active:
             if event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
@@ -154,7 +224,7 @@ while running:
             elif not (event.mod & pygame.KMOD_CTRL and event.key == pygame.K_v):
                 input_text += event.unicode
 
-#дальше идет отрисовка всякой брехни
+    # дальше идет отрисовка всякой брехни
 
     # верхний текст / название
     screen.blit(title_text, (50, 50))

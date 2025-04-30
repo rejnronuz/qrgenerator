@@ -11,12 +11,6 @@ pygame.display.set_caption("QrGenerator")
 font = pygame.font.Font(None, 32)
 infofont = pygame.font.Font(None, 16)
 clock = pygame.time.Clock()
-qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
 
 # Загрузка картинок
 try:
@@ -64,8 +58,8 @@ preview_rect = pygame.Rect(50, 260, 350, 350) # Окно превью
 theme_btn_rect = pygame.Rect(600, 20, 50, 50) # Кнопка темы
 settings_btn_rect = pygame.Rect(600, 80, 50, 50) # Кнопка настроек
 save_btn_rect = pygame.Rect(410, 568, 275, 40) # Кнопка сохранения
-check_rect_folder = pygame.Rect(200, 405, 50, 50) # Кнопка темы
-check_rect_document = pygame.Rect(200, 335, 50, 50)
+check_rect_folder = pygame.Rect(200, 405, 50, 50) # Кнопка сохранения в папку
+check_rect_document = pygame.Rect(200, 335, 50, 50) # Кнопка сохранения в документ
 
 # Переменные
 active = False
@@ -105,9 +99,6 @@ if is_dark_theme == True:
 else:
     update_theme_texts(light_theme)
 
-import os
-import shutil
-
 def move(file):
     # докумендики гыгыхыхыхыг
     documents_path = os.path.expanduser('~/Documents')
@@ -132,6 +123,12 @@ def move(file):
 
 # Генерация
 def generate_qrcode(text):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
     if not text:
         return None
     # Настройки
@@ -147,6 +144,12 @@ def generate_qrcode(text):
     return pygame.transform.scale(pygame_surface, (340, 340))
 
 def save_qr(text):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
     if not text:
         return None
     # Настройки
@@ -183,9 +186,9 @@ def draw_settings_window():
     pygame.draw.rect(screen, current_theme['button'], check_rect_folder)
 
     if savingInsideDocuments == True:
-        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_document )  # fuckass
+        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_document)  # fuckass
     else:
-        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_folder )  # fuckass
+        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_folder)  # fuckass
 
     screen.blit(choice_text, (settings_rect.x + 115, settings_rect.y + 197))
     screen.blit(choice_text_folder, (settings_rect.x + 115, settings_rect.y + 267))
@@ -234,6 +237,12 @@ while running:
             if clear_rect.collidepoint(event.pos):
                 input_text = ""  # Очищаем текст
                 qrcode_image = None  # Сбрасываем превью
+                qr = qrcode.QRCode( # shit had me stressed
+                version=1, # Тимур тут баг короче был то что оно норм не сбрасывалось, как код показывать будешь уберешь
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+                    )
                 print('Reset')
 
             if theme_btn_rect.collidepoint(event.pos):

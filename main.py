@@ -1,16 +1,16 @@
-import pygame
-import qrcode
-import os
-import shutil
+import pygame # Сам пайгейм, обработка интерфейса
+import qrcode # Для генерации кодов
+import os # Для создания папок и путей в функциях move и createfolder
+import shutil # Для передвижения кода в функции move
 
 # Первоначальная настройка
-pygame.init()
-screen = pygame.display.set_mode((700, 700))
-pygame.scrap.init()
-pygame.display.set_caption("QrGenerator")
-font = pygame.font.Font(None, 32)
-infofont = pygame.font.Font(None, 16)
-clock = pygame.time.Clock()
+pygame.init() # Нужно пайгеймом
+screen = pygame.display.set_mode((700, 700)) # Размер окна
+pygame.scrap.init() # Нужно пайгеймом 
+pygame.display.set_caption("QrGenerator") # Название окна
+font = pygame.font.Font(None, 32) # Шрифт, тут дефолтный стоит
+clock = pygame.time.Clock() # Время
+folder_name = 'Results' # Название папки в которую будут сохранятся коды если в настройках сохранение в папку
 
 # Загрузка картинок
 try:
@@ -20,7 +20,7 @@ try:
     settings_light = pygame.transform.scale(pygame.image.load('settingsdark.png').convert_alpha(), (40, 40))
     toggle_light = pygame.transform.scale(pygame.image.load('togglelight.png').convert_alpha(), (40, 40))
     toggle_dark = pygame.transform.scale(pygame.image.load('toggledark.png').convert_alpha(), (40, 40))
-except Exception as e:
+except Exception as e: # Выдает ошибку если нету картинок в рабочей директории
     print(f"не удалось загрузить ассеты!: {e}")
     pygame.quit()
     exit()
@@ -61,9 +61,11 @@ save_btn_rect = pygame.Rect(410, 568, 275, 40) # Кнопка сохранени
 check_rect_folder = pygame.Rect(200, 405, 50, 50) # Кнопка сохранения в папку
 check_rect_document = pygame.Rect(200, 335, 50, 50) # Кнопка сохранения в документ
 
+
+
 # Переменные
 active = False
-qrcode_image = None
+qrcode_image = None # Пока еще ничего не генерировали, пустое изображение в предпросмотре
 input_text = "" # Изначальный текст в поле ввода при запуске
 is_dark_theme = True  # Изначальная тема при запуске
 settings_window_open = False # Открыто ли окно настроек при запуске
@@ -82,26 +84,54 @@ def update_theme_texts(theme):
     title_text = font.render("Введите текст для генерации QR-кода:", True, theme['text']) # Верхний текст
     button_text = font.render("Сгенерировать", True, theme['text']) # Текст для кнопки генерации
     preview_title = font.render("Предпросмотр:", True, theme['text']) # Текст для превью
-    info_text = font.render("Готовый QR-код будет сохранен в папку с программой", True, theme['text']) # Нижний текст
-    settings_btn_text = font.render("Настройки", True, theme['text']) # Текст для настроек
+    if savingInsideDocuments == False:
+        info_text = font.render("Готовый QR-код будет сохранен в папку 'Results'", True, theme['text']) # Меняем нижний текст в зависимости от того, куда сохраняем
+    else:
+        info_text = font.render("Готовый QR-код будет сохранен в документы", True, theme['text']) # Ну я думаю тут ясно
     clear_text = font.render("Очистить", True, theme['text'])  # Текст для кнопки очистки
-    save_text = font.render("Сохранить", True, theme['text'])  # Текст над кнопками
-    save_settings_text = font.render("Cохранять в...", True, theme['text'])  # Текст для кнопки AAAAAAAAAAAAAAAAAAA CHURKI TOLPOY NAPALIIIII
+    save_text = font.render("Сохранить", True, theme['text'])  # Текст кнопки сохранения
+    save_settings_text = font.render("Cохранять в...", True, theme['text'])  # Текст над кнопками сохранения в настройках
     choice_text = font.render("В Документы", True, theme['text'])  # Документы
     choice_text_folder = font.render("В текущую папку", True, theme['text'])  # Текущая папка
-    settings_title = font.render("Настройки", True, theme['text'])
+    settings_title = font.render("Настройки", True, theme['text']) # Верхний текст настроек
     color_label = font.render("Цвет кода:", True, theme['text']) # Текст над выбором цвета
-    backcolor_label = font.render("Цвет фона:", True, theme['text'])
+    backcolor_label = font.render("Цвет фона:", True, theme['text']) # Текст над выбором фона
     print('Updated texts')
 
-if is_dark_theme == True:
+if is_dark_theme == True: # Обновляем текста в зависимости от темы
     update_theme_texts(dark_theme)
 else:
     update_theme_texts(light_theme)
 
-def move(file):
-    # докумендики гыгыхыхыхыг
-    documents_path = os.path.expanduser('~/Documents')
+def createfolder():
+    # Берем рабочую папку скрипта
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Создаем путь к Results в рабочей директории
+    folder_path = os.path.join(script_dir, folder_name)
+
+    # Проверяем есть ли папка
+    if not os.path.isdir(folder_path):
+        try:
+            # Создаем папку
+            os.mkdir(folder_path)
+            print(f"Directory '{folder_name}' created successfully.")
+        except OSError as error: # Если что то случилось, не создаем папку
+            print(f"Error creating directory '{folder_name}': {error}")
+        else: # Или если она уже существует
+            print(f"Directory '{folder_name}' already exists.")
+
+def move(file, document):
+    # Если нужно передвинуть файл в документы то генерим путь к файлу в документы
+    if document == True:
+        # Генерим путь в документы
+        documents_path = os.path.expanduser('~/Documents')
+    else:
+        # Иначе, генерим путь в папку результатов внутри папки рабочей директории
+        # Берем рабочую директорию
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Генерим путь
+        documents_path = os.path.join(script_dir, folder_name)
     
     # Проверяем есть ли папка документов
     if not os.path.exists(documents_path):
@@ -121,7 +151,7 @@ def move(file):
     print(f"File moved to documents {destination}")
     return True
 
-# Генерация
+# Генерация превью НЕ СОХРАНЕНИЕ!!!!!!
 def generate_qrcode(text):
     qr = qrcode.QRCode(
         version=1,
@@ -129,20 +159,23 @@ def generate_qrcode(text):
         box_size=10,
         border=4,
     )
+    # Если нет текста, ничего не делать
     if not text:
         return None
     # Настройки
-    qr.add_data(text)
+    qr.add_data(text) # Закидываем младенца во фритюрницу (текст в генератор кодов)
     qr.make(fit=True)
 
-    # Превью для тем
+    # Генерим превью
     img = qr.make_image(fill_color=color, back_color=backcolor)
     img_rgb = img.convert("RGB")
     data = img_rgb.tobytes()
+    # Выводим
     pygame_surface = pygame.image.fromstring(data, img_rgb.size, "RGB")
     print('Generated preview')
     return pygame.transform.scale(pygame_surface, (340, 340))
 
+# СОХРАНЕНИЕ В ПАПКУ НЕ ГЕНЕРАЦИЯ ПРЕВЬЮ!!!!!
 def save_qr(text):
     qr = qrcode.QRCode(
         version=1,
@@ -150,20 +183,21 @@ def save_qr(text):
         box_size=10,
         border=4,
     )
+    # Если нет текста, ничего не делаем
     if not text:
         return None
     # Настройки
-    qr.add_data(text)
+    qr.add_data(text) # Закидываем младенца во фритюрницу (текст в генератор кодов)
     qr.make(fit=True)
 
     # Сохранение кода в папку
     img = qr.make_image(fill_color=color, back_color=backcolor)
     img.save("qrcode.png")
+    createfolder() # Если нет папки в рабочей директории, делаем
     if savingInsideDocuments == True:
-        move("qrcode.png") #FUCKASS GRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH
+        move("qrcode.png", True) # Передвигаем файл ЛИБО в папку Results ЛИБО в папку Документы
     else:
-        pass
-    print("Saved QR")
+        move("qrcode.png", False) # Передвигаем файл ЛИБО в папку Results ЛИБО в папку Документы
 # Отрисовка окна настроек
 def draw_settings_window():
     settings_rect = pygame.Rect(150, 150, 400, 400) # Окно настроек
@@ -186,7 +220,7 @@ def draw_settings_window():
     pygame.draw.rect(screen, current_theme['button'], check_rect_folder)
 
     if savingInsideDocuments == True:
-        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_document)  # fuckass
+        screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_document)  # Отрисовываем галочку на соответствующем выборе пользователя
     else:
         screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_folder)  # fuckass
 
@@ -238,21 +272,22 @@ while running:
                 input_text = ""  # Очищаем текст
                 qrcode_image = None  # Сбрасываем превью
                 qr = qrcode.QRCode( # shit had me stressed
-                version=1, # Тимур тут баг короче был то что оно норм не сбрасывалось, как код показывать будешь уберешь
+                version=1, # Тимур или Рамазан тут баг короче был то что оно норм не сбрасывалось, как код показывать будешь уберешь
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
                 box_size=10,
                 border=4,
                     )
                 print('Reset')
 
+            # Обработка нажатий по кнопке темы
             if theme_btn_rect.collidepoint(event.pos):
-                is_dark_theme = not is_dark_theme
-                update_theme_texts(dark_theme if is_dark_theme else light_theme)
+                is_dark_theme = not is_dark_theme # Меняем тему
+                update_theme_texts(dark_theme if is_dark_theme else light_theme) # Обновляем текста с новой темой
                 print('Changed theme')
 
             # Обработка нажатия на кнопку настроек
             if settings_btn_rect.collidepoint(event.pos):
-                settings_window_open = not settings_window_open
+                settings_window_open = not settings_window_open # Открываем окно настроек если оно закрыто
                 print('Drew settings window')
             if settings_window_open:
                 mouse_pos = event.pos
@@ -270,36 +305,44 @@ while running:
                 # Выбор цвета из списка
                 elif color_dropdown_open:
                     for i, col in enumerate(available_colors):
-                        item_rect = pygame.Rect(200, 270 + i * 40, 150, 40)
+                        item_rect = pygame.Rect(200, 270 + i * 40, 150, 40) # Рисуем квадратик на каждый цвет в списке
                         if item_rect.collidepoint(mouse_pos):
-                            color = col
-                            color_dropdown_open = False
+                            color = col # Выбираем цвет в зависимости от выбора пользователя
+                            color_dropdown_open = False # Закрываем окошко
                 # Выбор фона из списка
                 elif backcolor_dropdown_open:
                     for i, col in enumerate(available_colors):
-                        item_rect = pygame.Rect(350, 270 + i * 40, 150, 40)
+                        item_rect = pygame.Rect(350, 270 + i * 40, 150, 40) # Рисуем квадратик на каждый цвет в списке
                         if item_rect.collidepoint(mouse_pos):
-                            backcolor = col
-                            backcolor_dropdown_open = False
-                else:  # Нажатие вне элементов закрывает меню
+                            backcolor = col # Выбираем цвет в зависимости от выбора пользователя
+                            backcolor_dropdown_open = False # Закрываем окошко
+                else:  # Нажатие вне элементов закрывает окно
                     color_dropdown_open = False
                     backcolor_dropdown_open = False
 
                 # Обработка нажатий по выборам докумендиков
                 if check_rect_folder.collidepoint(mouse_pos):
                     if savingInsideDocuments == False:
-                        False
+                        False # Если уже выбор который нам нужен, ничего не делаем
                     else:
-                        savingInsideDocuments = False
+                        savingInsideDocuments = False # Меняем сохранение
+                        if is_dark_theme == True: # Обновляем текста для нижнего текста
+                            update_theme_texts(dark_theme)
+                        else:
+                            update_theme_texts(light_theme)
                 elif check_rect_document.collidepoint(mouse_pos):
                     if savingInsideDocuments == True:
-                        False
+                        False # Если уже выбор который нам нужен, ничего не делаем
                     else:
-                        savingInsideDocuments = True
+                        savingInsideDocuments = True # Меняем сохранение
+                        if is_dark_theme == True: # Обновляем текста для нижнего текста
+                            update_theme_texts(dark_theme)
+                        else:
+                            update_theme_texts(light_theme)
 
-        if event.type == pygame.KEYDOWN and active:
+        if event.type == pygame.KEYDOWN and active: # ВВОД ТЕКСТА ЭТО ВАЩЕ НЕ ТРОГАТЬ
             if event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
-                clipboard_text = pygame.scrap.get(pygame.SCRAP_TEXT)
+                clipboard_text = pygame.scrap.get(pygame.SCRAP_TEXT) # Обрабатываем вставку
                 if clipboard_text:
                     try:
                         pasted_text = clipboard_text.decode('utf-8').replace('\x00', '')
@@ -307,7 +350,7 @@ while running:
                     except UnicodeDecodeError:
                         pass
             elif event.key == pygame.K_BACKSPACE:
-                input_text = input_text[:-1]
+                input_text = input_text[:-1] # Если бекспейс то удаляем один символ
             elif not (event.mod & pygame.KMOD_CTRL and event.key == pygame.K_v):
                 input_text += event.unicode
 
@@ -349,6 +392,7 @@ while running:
     if qrcode_image:
         screen.blit(qrcode_image, (preview_rect.x + 5, preview_rect.y + 5))
 
+    # Нижний текст
     screen.blit(info_text, (50, 620))
 
     # Отрисовка окна настроек, если оно открыто
@@ -359,3 +403,4 @@ while running:
     clock.tick(30)
 
 pygame.quit()
+# It's been 24 hours without my Roblox girlfriend, I can't go ahead with this any longer. My mental state is in complete and utter pandemonium. I cried myself to sleep 4 times today. I feel paranoid that my roblox girlfriend may never come back. My roblox girlfriend has the only thing that brings me joy in this cruel life for 7 years now and I won't be able to recover mentally or financially if it's gone. I've spent over $7,000 on my Roblox girlfriend this week alone. I even bought $500 worth of robux for my Roblox girlfriend, because I trust my roblox girlfriend. I told my mom through tears and she yelled at me calling me a "failure" and saying she knew she should have been on birth control. Although, My roblox girlfriend being gone has had it's positive impacts on me. My IQ has increased by 40 and I've been thinking more critically. When I saw the last “gtg” message of my roblox girlfriend, i vomited. I just hope she’ll come back, I even started praying again. I've been a dedicated Christian for 12 years and I began to pray to god in hopes that they my Roblox girlfriend will be back soon. I had to learn Arabic to pray to Allah. I hope my Roblox girlfriend comes back soon I don't know how much longer I can take this. 

@@ -2,6 +2,8 @@ import pygame # Сам пайгейм, обработка интерфейса
 import qrcode # Для генерации кодов
 import os # Для создания папок и путей в функциях move и createfolder
 import shutil # Для передвижения кода в функции move
+import sys # Можешь ваще на это забить, но короче когда ты в .ехе собираешь через pyinstaller, там рабочая директория не папка с екзешником а новая папка каждый раз временная, этот модуль нужен чтобы проверять запускаемся мы со скрипта или с экзешника
+# Короче похер
 
 # Первоначальная настройка
 pygame.init() # Нужно пайгеймом
@@ -14,16 +16,16 @@ folder_name = 'Results' # Название папки в которую буду
 
 # Загрузка картинок
 try:
-    moon_img = pygame.transform.scale(pygame.image.load('moon.png').convert_alpha(), (40, 40))
-    sun_img = pygame.transform.scale(pygame.image.load('sun.png').convert_alpha(), (40, 40))
-    settings_dark = pygame.transform.scale(pygame.image.load('settingslight.png').convert_alpha(), (40, 40))
-    settings_light = pygame.transform.scale(pygame.image.load('settingsdark.png').convert_alpha(), (40, 40))
-    toggle_light = pygame.transform.scale(pygame.image.load('togglelight.png').convert_alpha(), (40, 40))
-    toggle_dark = pygame.transform.scale(pygame.image.load('toggledark.png').convert_alpha(), (40, 40))
+    moon_img = pygame.transform.scale(pygame.image.load('Assets/moon.png').convert_alpha(), (40, 40))
+    sun_img = pygame.transform.scale(pygame.image.load('Assets/sun.png').convert_alpha(), (40, 40))
+    settings_dark = pygame.transform.scale(pygame.image.load('Assets/settingslight.png').convert_alpha(), (40, 40))
+    settings_light = pygame.transform.scale(pygame.image.load('Assets/settingsdark.png').convert_alpha(), (40, 40))
+    toggle_light = pygame.transform.scale(pygame.image.load('Assets/togglelight.png').convert_alpha(), (40, 40))
+    toggle_dark = pygame.transform.scale(pygame.image.load('Assets/toggledark.png').convert_alpha(), (40, 40))
 except Exception as e: # Выдает ошибку если нету картинок в рабочей директории
     print(f"не удалось загрузить ассеты!: {e}")
     pygame.quit()
-    exit()
+
 # Темы, меняйте по желанию
 # Светлая тема
 light_theme = {
@@ -105,7 +107,10 @@ else:
 
 def createfolder():
     # Берем рабочую папку скрипта
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        script_dir = os.path.dirname(sys.executable)
+    else:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Создаем путь к Results в рабочей директории
     folder_path = os.path.join(script_dir, folder_name)
@@ -115,11 +120,11 @@ def createfolder():
         try:
             # Создаем папку
             os.mkdir(folder_path)
-            print(f"Directory '{folder_name}' created successfully.")
+            print(f"Directory '{folder_name}' created successfully")
         except OSError as error: # Если что то случилось, не создаем папку
             print(f"Error creating directory '{folder_name}': {error}")
         else: # Или если она уже существует
-            print(f"Directory '{folder_name}' already exists.")
+            print(f"{folder_name} already exists")
 
 def move(file, document):
     # Если нужно передвинуть файл в документы то генерим путь к файлу в документы
@@ -129,17 +134,21 @@ def move(file, document):
     else:
         # Иначе, генерим путь в папку результатов внутри папки рабочей директории
         # Берем рабочую директорию
-        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, 'frozen', False):
+            script_dir = os.path.dirname(sys.executable) # Если запустились с экзешника
+        else:
+            script_dir = os.path.dirname(os.path.abspath(__file__)) # Если запустились с скрипта
+            # Ваще не парься тупо так и скажи
         # Генерим путь
         documents_path = os.path.join(script_dir, folder_name)
     
     # Проверяем есть ли папка документов
     if not os.path.exists(documents_path):
-        print(f"Documents not found{documents_path}")
+        print(f"Path not found{documents_path}")
         return False
     # Проверяем есть ли файл
     if not os.path.exists(file):
-        print(f"Sourceиnot found {file}")
+        print(f"Source not found {file}")
         return False
     # Берем имя файла
     filename = os.path.basename(file)
@@ -148,7 +157,7 @@ def move(file, document):
     
     # Передвигаем файл
     shutil.move(file, destination)
-    print(f"File moved to documents {destination}")
+    print(f"File {file} moved to {destination}")
     return True
 
 # Генерация превью НЕ СОХРАНЕНИЕ!!!!!!

@@ -3,6 +3,8 @@ import qrcode # Для генерации кодов
 import os # Для создания папок и путей в функциях move и createfolder
 import shutil # Для передвижения кода в функции move
 import sys # Можешь ваще на это забить, но короче когда ты в .ехе собираешь через pyinstaller, там рабочая директория не папка с екзешником а новая папка каждый раз временная, этот модуль нужен чтобы проверять запускаемся мы со скрипта или с экзешника
+from pathlib import Path
+from xdg import *
 # Короче похер
 
 # Первоначальная настройка
@@ -37,7 +39,8 @@ light_theme = {
     'qr_fill': (0, 0, 0),  # Цвет QR
     'qr_bg': (255, 255, 255),  # Фон превью
     'theme_btn_bg': (220, 220, 220),  # Фон выбора темы и настроек
-    'button_inactive': (157, 169, 227)
+    'button_inactive': (157, 169, 227),
+    'err': (219, 70, 59)
 }
 # Темная тема
 dark_theme = {
@@ -49,7 +52,8 @@ dark_theme = {
     'qr_fill': (255, 255, 255),
     'qr_bg': (30, 30, 30),
     'theme_btn_bg': (80, 80, 80),
-    'button_inactive': (157, 169, 227)
+    'button_inactive': (157, 169, 227),
+    'err': (219, 70, 59)
 }
 
 # Кнопки
@@ -82,7 +86,7 @@ available_colors = ['black', 'white', 'red', 'green', 'blue', 'yellow']  # До�
 
 # Надписи
 def update_theme_texts(theme):
-    global title_text, button_text, preview_title, info_text, settings_btn_text, clear_text, save_text, choice_text, choice_text_folder, save_settings_text, settings_title, backcolor_label, color_label
+    global title_text, button_text, preview_title, info_text, settings_btn_text, clear_text, save_text, choice_text, choice_text_folder, save_settings_text, settings_title, backcolor_label, color_label, error_setting_text
     title_text = font.render("Введите текст для генерации QR-кода:", True, theme['text']) # Верхний текст
     button_text = font.render("Сгенерировать", True, theme['text']) # Текст для кнопки генерации
     preview_title = font.render("Предпросмотр:", True, theme['text']) # Текст для превью
@@ -93,8 +97,9 @@ def update_theme_texts(theme):
     clear_text = font.render("Очистить", True, theme['text'])  # Текст для кнопки очистки
     save_text = font.render("Сохранить", True, theme['text'])  # Текст кнопки сохранения
     save_settings_text = font.render("Cохранять в...", True, theme['text'])  # Текст над кнопками сохранения в настройках
+    error_setting_text = font.render("Папка 'Документы' не найдена!", True, theme['err'])  # Текст над кнопками сохранения в настройках
     choice_text = font.render("В Документы", True, theme['text'])  # Документы
-    choice_text_folder = font.render("В текущую папку", True, theme['text'])  # Текущая папка
+    choice_text_folder = font.render("В 'Results'", True, theme['text'])  # Текущая папка
     settings_title = font.render("Настройки", True, theme['text']) # Верхний текст настроек
     color_label = font.render("Цвет кода:", True, theme['text']) # Текст над выбором цвета
     backcolor_label = font.render("Цвет фона:", True, theme['text']) # Текст над выбором фона
@@ -104,6 +109,29 @@ if is_dark_theme == True: # Обновляем текста в зависимо�
     update_theme_texts(dark_theme)
 else:
     update_theme_texts(light_theme)
+
+def get_documents_path():
+    if sys.platform == 'win32':
+        return os.path.join(os.environ['USERPROFILE'], 'Documents')
+    else:
+        try:
+            from xdg import BaseDirectory
+            return BaseDirectory.xdg_documents_dir
+        except ImportError:
+            # Резервный вариант без pyxdg
+            xdg_documents = os.environ.get('XDG_DOCUMENTS_DIR')
+            if xdg_documents:
+                return xdg_documents
+                
+            config_path = Path.home() / '.config' / 'user-dirs.dirs'
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    for line in f:
+                        if line.startswith('XDG_DOCUMENTS_DIR'):
+                            path = line.split('=')[1].strip().strip('"')
+                            return path.replace('$HOME', str(Path.home()))
+            
+            return str(Path.home() / 'Documents')
 
 def createfolder():
     # Берем рабочую папку скрипта
@@ -127,39 +155,39 @@ def createfolder():
             print(f"{folder_name} already exists")
 
 def move(file, document):
-    # Если нужно передвинуть файл в документы то генерим путь к файлу в документы
-    if document == True:
-        # Генерим путь в документы
-        documents_path = os.path.expanduser('~/Documents')
+    if document:
+        documents_path = get_documents_path()
     else:
-        # Иначе, генерим путь в папку результатов внутри папки рабочей директории
         # Берем рабочую директорию
         if getattr(sys, 'frozen', False):
-            script_dir = os.path.dirname(sys.executable) # Если запустились с экзешника
+            script_dir = os.path.dirname(sys.executable)
         else:
-            script_dir = os.path.dirname(os.path.abspath(__file__)) # Если запустились с скрипта
-            # Ваще не парься тупо так и скажи
-        # Генерим путь
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Генерим путь к папке Results
         documents_path = os.path.join(script_dir, folder_name)
+        # Создаем папку, если она не существует
+        if not os.path.exists(documents_path):
+            os.makedirs(documents_path)
     
-    # Проверяем есть ли папка документов
-    if not os.path.exists(documents_path):
-        print(f"Path not found{documents_path}")
-        return False
     # Проверяем есть ли файл
     if not os.path.exists(file):
         print(f"Source not found {file}")
         return False
+    
     # Берем имя файла
     filename = os.path.basename(file)
     # Создаем путь
     destination = os.path.join(documents_path, filename)
     
-    # Передвигаем файл
-    shutil.move(file, destination)
-    print(f"File {file} moved to {destination}")
-    return True
-
+    try:
+        # Передвигаем файл
+        shutil.move(file, destination)
+        print(f"File {file} moved to {destination}")
+        return True
+    except Exception as e:
+        print(f"Error moving file: {e}")
+        return False
+    
 # Генерация превью НЕ СОХРАНЕНИЕ!!!!!!
 def generate_qrcode(text):
     qr = qrcode.QRCode(
@@ -206,7 +234,7 @@ def save_qr(text):
     if savingInsideDocuments == True:
         move("qrcode.png", True) # Передвигаем файл ЛИБО в папку Results ЛИБО в папку Документы
     else:
-        move("qrcode.png", False) # Передвигаем файл ЛИБО в папку Results ЛИБО в папку Документы
+        move("qrcode.png", False)
 # Отрисовка окна настроек
 def draw_settings_window():
     settings_rect = pygame.Rect(150, 150, 400, 400) # Окно настроек
@@ -234,6 +262,8 @@ def draw_settings_window():
         screen.blit(toggle_dark if is_dark_theme else toggle_light, check_rect_folder)  # fuckass
 
     screen.blit(choice_text, (settings_rect.x + 115, settings_rect.y + 197))
+    if not os.path.exists(get_documents_path()):
+        screen.blit(error_setting_text, (settings_rect.x + 30, settings_rect.y + 347))
     screen.blit(choice_text_folder, (settings_rect.x + 115, settings_rect.y + 267))
 
     if color_dropdown_open:
@@ -343,7 +373,11 @@ while running:
                     if savingInsideDocuments == True:
                         False # Если уже выбор который нам нужен, ничего не делаем
                     else:
-                        savingInsideDocuments = True # Меняем сохранение
+                        if not os.path.exists(get_documents_path()):
+                            print('fake ahh docs')
+                            savingInsideDocuments = False
+                        else:
+                            savingInsideDocuments = True # Меняем сохранение
                         if is_dark_theme == True: # Обновляем текста для нижнего текста
                             update_theme_texts(dark_theme)
                         else:
